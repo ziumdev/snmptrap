@@ -83,7 +83,7 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
     bodyJson = mrsConfig.bodyJson
     uSvcOutbId = mrsConfig.mrsClientCd + '-' + mrsConfig.mrsSiteCd + '-' + mrsConfig.headerTypeCd + 'TAG' + str(
         eventCnt).zfill(3)
-    statEvetId = uSvcOutbId + 'E01'
+    statEvetId = ''
     statEvetNm = ''
     dataKey = None
     dataValue = None
@@ -122,6 +122,10 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
         elif name.prettyPrint() == mrsConfig.trapOidList['alarmDesc']:
             byte_array = bytearray.fromhex(val.prettyPrint()[2:])
             statEvetNm = byte_array.decode()
+            if statEvetNm.startswith('가스센서_D'):
+                statEvetId = 'SMT-PA1-000DIE001E02'
+            elif statEvetNm.startswith('가스센서_A'):
+                statEvetId = 'SMT-PA1-000DIE001E11'
         elif name.prettyPrint() == mrsConfig.trapOidList['alarmValDesc']:
             pass
         elif name.prettyPrint() == mrsConfig.trapOidList['alarmRate']:
