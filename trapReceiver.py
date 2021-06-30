@@ -3,10 +3,14 @@
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asyncore.dgram import udp
 from pysnmp.entity.rfc3413 import ntfrcv
-from Config import mrsConfig, snmpConfig
+# from Config import mrsConfig, snmpConfig
 import logging
 import socket, json, datetime, struct
+import configparser
 
+config = configparser.ConfigParser()
+mrsConfig = config["mrsConfig"]
+snmpConfig = config["snmpConfig"]
 mrsHost = mrsConfig.ersHost
 mrsPort = mrsConfig.ersPort
 
