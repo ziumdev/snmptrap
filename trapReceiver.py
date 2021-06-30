@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asyncore.dgram import udp
 from pysnmp.entity.rfc3413 import ntfrcv
@@ -15,10 +17,13 @@ snmpTrapPort = snmpConfig.snmpTrapPort
 
 logging.basicConfig(filename='received_traps.log', filemode='w', format='%(asctime)s - %(message)s', level=logging.INFO)
 
-logging.info("Agent is listening SNMP Trap on "+trapAgentAddress+" , Port : " +str(snmpTrapPort))
+logging.info("Agent is listening SNMP Trap on " + trapAgentAddress + " , Port : " + str(snmpTrapPort))
 logging.info('--------------------------------------------------------------------------')
 
-print("Agent is listening SNMP Trap on "+trapAgentAddress+" , Port : " + str(snmpTrapPort))
+eventCnt = 0
+global trapFlag
+
+print("Agent is listening SNMP Trap on " + trapAgentAddress + " , Port : " + str(snmpTrapPort))
 
 config.addTransport(
     snmpEngine,
@@ -32,13 +37,13 @@ config.addTransport(
 #     config.usmDESPrivProtocol,  snmpConfig.userInfo['privProtocol'],
 #     securityEngineId=v2c.OctetString(value=snmpConfig.userInfo['OctetValue'])
 # )
-config.addV1System(snmpEngine, 'my-area', 'public') # SNMP v3로 날릴 때는 이 부분을 주석처리하고, SNMP v2는 주석을 개방하고 v3 유저정보를 삭제함
+
+config.addV1System(snmpEngine, 'my-area', 'public')  # SNMP v3로 날릴 때는 이 부분을 주석처리하고, SNMP v2는 주석을 개방하고 v3 유저정보를 삭제함
 
 
 def changeDict2Bytes(msg):
     encode_data = json.dumps(msg, indent=2).encode('utf-8')
     return encode_data
-
 
 def sendMsg(msg):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -51,7 +56,7 @@ def sendMsg(msg):
 def addZero(number):
     result = ''
     if 0 < number < 10:
-        result += '0'+str(number)
+        result += '0' + str(number)
         return result
     else:
         return str(number)
@@ -68,24 +73,79 @@ def addZeroMs(number):
 
 
 def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
-    print("Received new Trap message")
-    logging.info("Received new Trap message")
-
+    global eventCnt
+    trapFlag = False
+    bodyJson = mrsConfig.bodyJson
+    uSvcOutbId = mrsConfig.mrsClientCd + '-' + mrsConfig.mrsSiteCd + '-' + mrsConfig.headerTypeCd + 'TAG' + str(
+        eventCnt).zfill(3)
+    statEvetId = uSvcOutbId + 'E01'
+    statEvetNm = ''
+    dataKey = None
+    dataValue = None
+    statEvetGdCd = '0'
+    statEvetOutbDtm = ''
+    alarmPonit = '0'
+    rate = 1
     for name, val in varBinds:
-        if name.prettyPrint() == "1.3.6.1.4.1.30960.2.2.1.10.0":
+        if name.prettyPrint() == mrsConfig.trapOidList['alarmOccurs']:
+            if val.prettyPrint() != '1':
+                trapFlag = False
+                # bodyJson = None
+                break
+            else:
+                print("Received new Trap message")
+                logging.info("Received new Trap message")
+                trapFlag = True
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmNum']:
+            pass
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmLevel']:
+            statEvetGdCd = val.prettyPrint()
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmVal']:
+            dataValue = val.prettyPrint()
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmChar']:
+            pass
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmCpoint']:
+            alarmPonit = val.prettyPrint()
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmAbove']:
+            pass
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmTime']:
+            statEvetOutbDtm = val.prettyPrint()
+            pass
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmUnit']:
+            dataKey = val.prettyPrint()
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmDesc']:
             byte_array = bytearray.fromhex(val.prettyPrint()[2:])
-            logging.info('%s = %s' % (name.prettyPrint(), byte_array.decode()))
-            print('%s = %s' % (name.prettyPrint(), byte_array.decode()))
-            bodyJson = mrsConfig.bodyJson
-            # bodyJson['StatEvet']['outbPosNm'] = 'scold'  #
-            # bodyJson['StatEvet']['statEvetGdCd'] = '가스탐지기A'
-            # bodyJson['StatEvet']['statEvetClrDtm'] = currentDateTimeString
-            sendToErs(bodyJson)
-        else:
-            logging.info('%s = %s' % (name.prettyPrint(), val.prettyPrint()))
-            print('%s = %s' % (name.prettyPrint(), val.prettyPrint()))
+            statEvetNm = byte_array.decode()
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmValDesc']:
+            pass
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmRate']:
+            rate = val.prettyPrint()
+            pass
+        elif name.prettyPrint() == mrsConfig.trapOidList['alarmMeasureFormat']:
+            pass
+        statEvetItem = [{'key': dataKey, 'value': dataValue}]
+        bodyJson["StatEvet"]["uSvcOutbId"] = uSvcOutbId
+        bodyJson["StatEvet"]["statEvetId"] = statEvetId
+        bodyJson["StatEvet"]["statEvetNm"] = statEvetNm
+        bodyJson["StatEvet"]["statEvetGdCd"] = statEvetGdCd.zfill(2)
+        bodyJson["StatEvet"]["procSt"] = 1
+        bodyJson["StatEvet"]["outbPosCnt"] = 0
+        bodyJson["StatEvet"]["outbPosNm"] = statEvetNm
+        bodyJson["StatEvet"]["statEvetCntn"] = str(statEvetNm) + str(float(alarmPonit) / float(rate)) + str(
+            dataKey) + '초과'
+        bodyJson["StatEvet"]["statEvetOutbDtm"] = statEvetOutbDtm
+        bodyJson["StatEvet"]["statEvetItemCnt"] = 1
+        bodyJson["StatEvet"]["statEvetItem"] = statEvetItem
+        bodyJson["StatEvet"]["cpxRelEvetOutbSeqnCnt"] = 0
 
-        logging.info("==== End of Incoming Trap ====")
+    logging.info("==== End of Incoming Trap ====")
+    if trapFlag:
+        # print(bodyJson["StatEvet"]["statEvetNm"])
+        # print(bodyJson)
+        print(json.dumps(bodyJson, ensure_ascii=False))
+        sendToErs(bodyJson)
+        eventCnt += 1
+        trapFlag = False
 
 
 def sendToErs(jsonData):
@@ -97,11 +157,12 @@ def sendToErs(jsonData):
     # jsonData['StatEvet']['statEvetGdCd'] = '가스탐지기A'
     jsonData['StatEvet']['statEvetOutbDtm'] = currentDateTimeString
 
-    bodyByte = json.dumps(jsonData).encode('utf-8') # Json 값을 byte로 변경
+    bodyByte = json.dumps(jsonData, ensure_ascii=False).encode('utf-8')  # Json 값을 byte로 변경
     # bodyByte = marshal.dumps(bodyJson)
     bodyLength = struct.pack('<I', bodyByte.__len__())
     header = headerA.encode('utf-8').__add__(bodyLength).__add__(headerB.encode('utf-8'))
-    sendMsg(header+bodyByte)
+    msg = header + bodyByte
+    sendMsg(msg.decode())
 
 
 def run():
@@ -114,3 +175,4 @@ def run():
         snmpEngine.transportDispatcher.closeDispatcher()
         print(e)
         raise
+
