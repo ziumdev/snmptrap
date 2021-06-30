@@ -8,16 +8,17 @@ import logging
 import socket, json, datetime, struct
 import configparser
 
-config = configparser.ConfigParser()
-mrsConfig = config["mrsConfig"]
-snmpConfig = config["snmpConfig"]
-mrsHost = mrsConfig.ersHost
-mrsPort = mrsConfig.ersPort
+trapConfig = configparser.ConfigParser()
+trapConfig.read('config.ini')
+mrsConfig = trapConfig["mrsConfig"]
+snmpConfig = trapConfig["snmpConfig"]
+mrsHost = mrsConfig['ersHost']
+mrsPort = mrsConfig['ersPort']
 
 snmpEngine = engine.SnmpEngine()
 
-trapAgentAddress = snmpConfig.trapAgentAddress
-snmpTrapPort = snmpConfig.snmpTrapPort
+trapAgentAddress = snmpConfig['trapAgentAddress']
+snmpTrapPort = snmpConfig['snmpTrapPort']
 
 logging.basicConfig(filename='received_traps.log', filemode='w', format='%(asctime)s - %(message)s', level=logging.INFO)
 
@@ -90,6 +91,7 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
     statEvetOutbDtm = ''
     alarmPonit = '0'
     rate = 1
+    location = mrsConfig.location
     for name, val in varBinds:
         if name.prettyPrint() == mrsConfig.trapOidList['alarmOccurs']:
             if val.prettyPrint() != '1':
@@ -133,7 +135,7 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
         bodyJson["StatEvet"]["statEvetNm"] = statEvetNm
         bodyJson["StatEvet"]["statEvetGdCd"] = statEvetGdCd.zfill(2)
         bodyJson["StatEvet"]["procSt"] = 1
-        bodyJson["StatEvet"]["outbPosCnt"] = 0
+        bodyJson["StatEvet"]["outbPosCnt"] = 1
         bodyJson["StatEvet"]["outbPosNm"] = statEvetNm
         bodyJson["StatEvet"]["statEvetCntn"] = str(statEvetNm) + str(float(alarmPonit) / float(rate)) + str(
             dataKey) + '초과'
@@ -141,6 +143,7 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
         bodyJson["StatEvet"]["statEvetItemCnt"] = 1
         bodyJson["StatEvet"]["statEvetItem"] = statEvetItem
         bodyJson["StatEvet"]["cpxRelEvetOutbSeqnCnt"] = 0
+        bodyJson["StatEvet"]["outbPos"] = location
 
     logging.info("==== End of Incoming Trap ====")
     if trapFlag:

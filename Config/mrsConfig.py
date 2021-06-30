@@ -28,3 +28,9 @@ bodyJson = {
     "cpxRelEvetOutbSeqnCnt" : 0
   }
 }
+
+location = {
+  'x': 126.78460836410522,
+  'y': 37.761419193645686,
+  'z': 0
+}
