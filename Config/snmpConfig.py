@@ -1,4 +1,4 @@
-snmpHost = '192.168.200.100'
+snmpHost = '211.9.4.100'
 snmpPort = 161
 
 data = {
