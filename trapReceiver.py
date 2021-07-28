@@ -7,6 +7,7 @@ from Config import mrsConfig, snmpConfig
 import logging
 import socket, json, datetime, struct
 import configparser
+import uuid
 
 trapConfig = configparser.ConfigParser()
 trapConfig.read('config.ini')
@@ -79,10 +80,14 @@ def addZeroMs(number):
 
 def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
     global eventCnt
+    global trapFlag
+
+    stdCd = mrsConfig.mrsClientCd + '-' + mrsConfig.mrsClientCd + '-' + mrsConfig.headerTypeCd + mrsConfig.disasterCode
+
     trapFlag = False
     bodyJson = mrsConfig.bodyJson
-    uSvcOutbId = mrsConfig.mrsClientCd + '-' + mrsConfig.mrsSiteCd + '-' + mrsConfig.headerTypeCd + 'TAG' + str(
-        eventCnt).zfill(3)
+    uSvcOutbId = str(uuid.uuid4())[:24]
+    # uSvcOutbId = mrsConfig.mrsClientCd + '-' + mrsConfig.mrsSiteCd + '-' + mrsConfig.headerTypeCd + 'TAG' + str(eventCnt).zfill(3)
     statEvetId = ''
     statEvetNm = ''
     dataKey = None
@@ -119,13 +124,26 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
             pass
         elif name.prettyPrint() == mrsConfig.trapOidList['alarmUnit']:
             dataKey = val.prettyPrint()
+
+            # 단위가 없는 발생여부는 YN으로 처리함
+            if dataKey is '':
+                dataKey = 'YN'
+                dataValue = 'Y'
+
         elif name.prettyPrint() == mrsConfig.trapOidList['alarmDesc']:
             byte_array = bytearray.fromhex(val.prettyPrint()[2:])
             statEvetNm = byte_array.decode()
-            if statEvetNm.startswith('가스센서_D'):
-                statEvetId = 'SMT-PA1-000DIE001E02'
-            elif statEvetNm.startswith('가스센서_A'):
-                statEvetId = 'SMT-PA1-000DIE001E11'
+            if statEvetNm.startswith('생활관(화재)'):
+                statEvetId = stdCd + '001' + 'E03'
+            elif statEvetNm.startswith('급양관(화재)'):
+                statEvetId = stdCd + '001' + 'E04'
+            elif statEvetNm.startswith('급양관(가스)'):
+                statEvetId = stdCd + '001' + 'E05'
+            elif statEvetNm.startswith('보일러실(화재)'):
+                statEvetId = stdCd + '001' + 'E06'
+            elif statEvetNm.startswith('창고(가스)'):
+                statEvetId = stdCd + '001' + 'E07'
+
         elif name.prettyPrint() == mrsConfig.trapOidList['alarmValDesc']:
             pass
         elif name.prettyPrint() == mrsConfig.trapOidList['alarmRate']:
@@ -141,9 +159,9 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
         bodyJson["StatEvet"]["procSt"] = 1
         bodyJson["StatEvet"]["outbPosCnt"] = 1
         bodyJson["StatEvet"]["outbPosNm"] = statEvetNm
-        bodyJson["StatEvet"]["statEvetCntn"] = str(statEvetNm) + str(float(alarmPonit) / float(rate)) + str(
-            dataKey) + '초과'
+        bodyJson["StatEvet"]["statEvetCntn"] = str(statEvetNm) + str(float(alarmPonit) / float(rate)) + str(dataKey) + '초과'
         bodyJson["StatEvet"]["statEvetOutbDtm"] = statEvetOutbDtm
+        bodyJson["StatEvet"]["statEvetOutbHist"] = statEvetOutbDtm
         bodyJson["StatEvet"]["statEvetItemCnt"] = 1
         bodyJson["StatEvet"]["statEvetItem"] = statEvetItem
         bodyJson["StatEvet"]["cpxRelEvetOutbSeqnCnt"] = 0
@@ -151,8 +169,6 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
 
     logging.info("==== End of Incoming Trap ====")
     if trapFlag:
-        # print(bodyJson["StatEvet"]["statEvetNm"])
-        # print(bodyJson)
         print(json.dumps(bodyJson, ensure_ascii=False))
         sendToErs(bodyJson)
         eventCnt += 1
@@ -169,7 +185,6 @@ def sendToErs(jsonData):
     jsonData['StatEvet']['statEvetOutbDtm'] = currentDateTimeString
 
     bodyByte = json.dumps(jsonData, ensure_ascii=False).encode('utf-8')  # Json 값을 byte로 변경
-    # bodyByte = marshal.dumps(bodyJson)
     bodyLength = struct.pack('<I', bodyByte.__len__())
     header = headerA.encode('utf-8').__add__(bodyLength).__add__(headerB.encode('utf-8'))
     msg = header + bodyByte
