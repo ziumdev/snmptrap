@@ -51,6 +51,7 @@ def changeDict2Bytes(msg):
     encode_data = json.dumps(msg, indent=2).encode('utf-8')
     return encode_data
 
+
 def sendMsg(msg):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((mrsHost, mrsPort))
@@ -159,7 +160,10 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
         bodyJson["StatEvet"]["procSt"] = 1
         bodyJson["StatEvet"]["outbPosCnt"] = 1
         bodyJson["StatEvet"]["outbPosNm"] = statEvetNm
-        bodyJson["StatEvet"]["statEvetCntn"] = str(statEvetNm) + str(float(alarmPonit) / float(rate)) + str(dataKey) + '초과'
+        if dataKey is "YN":
+            bodyJson["StatEvet"]["statEvetCntn"] = str(statEvetNm) + '발생'
+        else :
+            bodyJson["StatEvet"]["statEvetCntn"] = str(statEvetNm) + str(float(alarmPonit) / float(rate)) + str(dataKey) + '초과'
         bodyJson["StatEvet"]["statEvetOutbDtm"] = statEvetOutbDtm
         bodyJson["StatEvet"]["statEvetOutbHist"] = statEvetOutbDtm
         bodyJson["StatEvet"]["statEvetItemCnt"] = 1
@@ -179,16 +183,13 @@ def sendToErs(jsonData):
     currentDateTimeString = datetime.datetime.today().strftime('%Y%m%d%H%M%S%f')[:-3]
     headerA = mrsConfig.mrsClientCd + '     ' + mrsConfig.mrsSiteCd + 'A1' + '      ' + mrsConfig.sendSystemCd + " "
     headerB = mrsConfig.headerTypeCd + mrsConfig.traceId + currentDateTimeString
-    # jsonData = mrsConfig.bodyJson
-    # jsonData['StatEvet']['outbPosNm'] = 'scold'
-    # jsonData['StatEvet']['statEvetGdCd'] = '가스탐지기A'
     jsonData['StatEvet']['statEvetOutbDtm'] = currentDateTimeString
 
     bodyByte = json.dumps(jsonData, ensure_ascii=False).encode('utf-8')  # Json 값을 byte로 변경
     bodyLength = struct.pack('<I', bodyByte.__len__())
     header = headerA.encode('utf-8').__add__(bodyLength).__add__(headerB.encode('utf-8'))
     msg = header + bodyByte
-    sendMsg(msg.decode())
+    sendMsg(msg)
 
 
 def run():
