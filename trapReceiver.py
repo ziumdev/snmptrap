@@ -83,7 +83,7 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
     global eventCnt
     global trapFlag
 
-    stdCd = mrsConfig.mrsClientCd + '-' + mrsConfig.mrsClientCd + '-' + mrsConfig.headerTypeCd + mrsConfig.disasterCode
+    stdCd = mrsConfig.mrsClientCd + '-' + mrsConfig.mrsSiteCd + '-' + '001' + mrsConfig.disasterCode
 
     trapFlag = False
     bodyJson = mrsConfig.bodyJson
@@ -144,6 +144,9 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
                 statEvetId = stdCd + '001' + 'E06'
             elif statEvetNm.startswith('창고(가스)'):
                 statEvetId = stdCd + '001' + 'E07'
+            elif statEvetNm.startswith('창고(화재)'):
+                statEvetId = stdCd + '001' + 'E08'
+
 
         elif name.prettyPrint() == mrsConfig.trapOidList['alarmValDesc']:
             pass

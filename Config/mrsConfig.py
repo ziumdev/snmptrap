@@ -7,7 +7,7 @@ ersPort = 9201 # MRS port : 9102, ERS port : 9202, simulater port : 8888
 mrsClientCd = 'SMT'
 mrsSiteCd = 'PA1'
 sendSystemCd = 'SIM'
-headerTypeCd = '000'
+headerTypeCd = '001'
 disasterCode = 'DIE'
 
 space = ' ' * 10
