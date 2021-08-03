@@ -147,7 +147,6 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
             elif statEvetNm.startswith('창고(화재)'):
                 statEvetId = stdCd + '001' + 'E08'
 
-
         elif name.prettyPrint() == mrsConfig.trapOidList['alarmValDesc']:
             pass
         elif name.prettyPrint() == mrsConfig.trapOidList['alarmRate']:
