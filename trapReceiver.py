@@ -83,7 +83,7 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
     global eventCnt
     global trapFlag
 
-    stdCd = mrsConfig.mrsClientCd + '-' + mrsConfig.mrsSiteCd + '-' + '001' + mrsConfig.disasterCode
+    stdCd = mrsConfig.mrsClientCd + '-' + mrsConfig.mrsSiteCd + '-' + '000' + mrsConfig.disasterCode
 
     trapFlag = False
     bodyJson = mrsConfig.bodyJson
