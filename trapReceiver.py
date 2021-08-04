@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+import time, requests
 
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asyncore.dgram import udp
 from pysnmp.entity.rfc3413 import ntfrcv
-from Config import mrsConfig, snmpConfig
+from Config import mrsConfig, snmpConfig, mobileConfig
 import logging
 import socket, json, datetime, struct
 import configparser
@@ -174,9 +175,11 @@ def cbFun(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cb
         bodyJson["StatEvet"]["outbPos"] = location
 
     logging.info("==== End of Incoming Trap ====")
+
     if trapFlag:
         print(json.dumps(bodyJson, ensure_ascii=False))
         sendToErs(bodyJson)
+        sendMobile()
         eventCnt += 1
         trapFlag = False
 
@@ -192,6 +195,33 @@ def sendToErs(jsonData):
     header = headerA.encode('utf-8').__add__(bodyLength).__add__(headerB.encode('utf-8'))
     msg = header + bodyByte
     sendMsg(msg)
+
+
+def sendMobile():
+    postMsg = mobileConfig.param
+    postMsgData = json.dumps(postMsg, ensure_ascii=False).encode('utf-8')
+    try:
+        header = {
+            'Content-type': 'application/json',
+        }
+        response = requests.post(url=mobileConfig.mobileAPIServerHost + mobileConfig.mobileAPIServerURL, data=postMsgData, headers=header)
+        print(
+            {'response': response}
+        )
+
+        return json.dumps({
+            "responseCode": 2000,
+            "responseMessage": "success"
+        })
+    except ConnectionError as connError:
+        print(connError)
+        return json.dumps({
+            "responseCode": 4004,
+            "responseMessage": "Connection with Mobile API server"
+        })
+    finally:
+        pass
+
 
 
 def run():
